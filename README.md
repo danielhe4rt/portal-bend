@@ -27,7 +27,7 @@ Here's what's inside:
 
 ## Running it
 
-You need Linux with X11 or XWayland, and **Bend 2.0.8**:
+You need Linux with X11 or XWayland, and **Bend 2.0.10**:
 
 ```bash
 curl -fsSL https://bend-lang.com/install.sh | sh
@@ -39,7 +39,7 @@ Then just:
 ./play.sh
 ```
 
-`play.sh` rebuilds the game when any `.bend` or `.c` file changes, and runs it with `--threads 4`.
+`play.sh` rebuilds the game when any `.bend` or `.c` file changes, and runs it with `--gpu off --threads 4`: each frame is one bang, and the CPU pool draws it (on this machine the pool beats the GPU, see [docs/guide/GPU.md](docs/guide/GPU.md)).
 
 But Daniel, why only 4 threads? Because the default uses ALL your cores, and for a small frame, waking up 32 workers costs more than drawing the screen. With 4 it holds 60 FPS.
 
@@ -118,7 +118,7 @@ The field of view is **Hor+**: the height sets the scale, and the width sets how
 ```bash
 bend tests/physics.bend                                    # jump, wall, crossing and funneling scenarios
 bend tests/snapshot.bend | python3 tests/snapshot.py snaps # scenes as PNG, at several window sizes
-bend tests/bench.bend -o bench && ./bench --threads 4      # 300 frames
+tests/bench.sh                                             # 4 scenes x 3 window sizes, ms per frame
 ```
 
 The snapshots don't open any window: Bend prints the quadtree and Python builds the PNG.

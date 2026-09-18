@@ -311,6 +311,8 @@ So, for a 4K frame:
 
 ## 5. What this means for portal-bend
 
+> **Update:** we applied the parts that pay off on the CPU. The worst case went from 12.0 to 7.1 ms at 720p and from 44 to 23 ms at 1440p. The numbers, and the parts that did NOT pay off, are in [CPU.md](CPU.md).
+
 - **The tile shape is worth it on the CPU right now.** A tile renderer with the game's features (portals, body clone, floor gradient, crosshair) should land below the current 2.6 ms. It also removes the whole `Sum` and `Cols` machinery: a tile does not need to know whether a block is uniform before it draws it, because the 2x2 check is local and cheap.
 - **Portals add divergence.** A ray can teleport up to 8 times, so lanes in the same SIMD group will run different step counts. The DDA per column pair and per tile keeps it bounded, but we have not measured it yet.
 - **The GPU is a later switch, not a rewrite.** The same binary runs with `--gpu off` or `--gpu 4GB`. If launch and allocation costs drop (or on unified memory), the flag flips.
@@ -328,7 +330,7 @@ Distilled from `SHADERS.md`, `bend3d.bend` and our own mistakes:
 4. **Hoist by dependency.** Anything that depends on x alone runs once per column pair per tile, not per pixel.
 5. **Flat loops only in the leaves.** Tail recursion on a `Nat` fuel, no parallel let, no non-tail self call.
 6. **Scene data as scalars and constants.** A 7-field record of `F32` rides in registers. A map is 16 `U32` masks, not a list.
-7. **Typed pick.** `pick(c, a: F32, b: F32)` and `word(c, a: U32, b: U32)`, never the generic `Bool.pick` in device code.
+7. **Typed pick, on the device.** `pick(c, a: F32, b: F32)` and `word(c, a: U32, b: U32)` instead of the generic `Bool.pick` in device code. On the CPU pool we measured the opposite: the typed pick made the game 13% slower (see [CPU.md](CPU.md)).
 8. **Drop the last frame inside the tree** (`Image.open` into `Four`, each tile ignores its quadrant).
 9. **Nothing folds the image inside the bang.** Checksums and dumps happen on the host, outside the timed loop.
 10. **Check the C.** `bend x.bend -o x.c`, then grep for `term_keep`, `rfc_seal` and `ctr_take`.
@@ -347,7 +349,7 @@ Small things, in the order we hit them. None of them blocked us for long, but ea
 3. **Termination on `U32` counters (new in 2.0.10).** A loop that counts down a `U32` gets `expected: a decreasing self-call`. The fix is a `Nat` fuel plus a `Bool`. It works, but the idiom is not in the guide.
 4. **A pattern binder with the name of a def** in the same module (`case CNode{lo, ..}` next to `def lo`) passes when you check the file alone and fails when another module imports it (`expected a pattern, observed cols.lo`).
 5. **`match` only on a parameter or a field.** On 2.0.8 the error was "a match on a parameter or field". On 2.0.10 it says "a match cannot scrutinize a local binder: give it its own def", which is MUCH better. The rule still shapes all code (a destructuring `P{a, b} = p` of a local fails too), so it deserves a bigger spot in the guide.
-6. **The generic `Bool.pick` is the obvious API and the wrong one for hot code.** The typed `pick` and `word` live in the demo, not in Base. `F32.pick` and `U32.pick` in Base would make the fast path the default.
+6. **The generic `Bool.pick` is the obvious API, and `SHADERS.md` calls it the wrong one for hot code.** The typed `pick` and `word` live in the demo, not in Base. BUT on the CPU pool the typed version was 13% slower in our game ([CPU.md](CPU.md)), so the right default is not obvious.
 
 **Runtime and tooling**
 
