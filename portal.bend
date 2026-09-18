@@ -20,11 +20,13 @@ import ./game/host/screen.bend as Host
 
 # Each frame: read the window (size, mouse, focus), draw, then apply the events and the physics.
 # The loop gives the next frame as "rest", because a def can only call the defs above it.
+# The frame is one bang: only a bang spreads the render over the thread pool (play.sh runs it with --gpu off).
+# Screen.sync is the IO step between the physics and the bang, so the bang does not run inline.
 
 def Game.view(s: T.GameState) -> T.GameState & Image:
   match s:
     case T.GameState{+body, +look, keys, +screen, +blue, +orange, +won, +clock}:
-      img = View.of(body, look, blue, orange, won, clock, screen)
+      img = View.of!(body, look, blue, orange, won, clock, screen)
       (T.GameState{body, look, keys, screen, blue, orange, won, clock}, img)
 
 def Game.next(window: Window, next: Maybe<T.GameState>, rest: Window -> T.GameState -> IO(Unit)) -> IO(Unit):
