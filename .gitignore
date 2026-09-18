@@ -11,3 +11,6 @@
 __pycache__/
 *.o
 *.so
+
+# GPU experiment builds
+/experiments/gpu/build/
