@@ -3,6 +3,7 @@
 /tests/*
 !/tests/*.bend
 !/tests/*.py
+!/tests/*.sh
 
 # Snapshot output
 /snaps/
