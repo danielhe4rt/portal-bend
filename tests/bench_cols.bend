@@ -16,7 +16,7 @@ def loop(+n: Nat, acc: F32) -> F32:
       +t = U32.to_f32(U32.from_nat(p))
       +dirx = F32.cos((t * 0.1 : F32))
       +diry = F32.sin((t * 0.1 : F32))
-      cols = Cols.build(10n, 0, 2048, 3.5, 3.5, dirx, diry, (F32.neg(diry) * 0.8 : F32), (dirx * 0.8 : F32), Ghost.of(3.5, 3.5, T.Portal{False{}, 15, 4, 0}, T.Portal{False{}, 0, 2, 1}), T.Portal{False{}, 15, 4, 0}, T.Portal{False{}, 0, 2, 1}, 360.0, 0.5, 800.0, 0.0, 1280)
+      cols = Cols.build(10n, False{}, 0, 2048, 3.5, 3.5, dirx, diry, (F32.neg(diry) * 0.8 : F32), (dirx * 0.8 : F32), Ghost.of(3.5, 3.5, T.Portal{False{}, 15, 4, 0}, T.Portal{False{}, 0, 2, 1}), T.Portal{False{}, 15, 4, 0}, T.Portal{False{}, 0, 2, 1}, 360.0, 0.5, 800.0, 0.0, 1280)
       loop(p, (acc + low(Cols.sum(cols)) : F32))
 
 def report(n: Nat) -> String:

@@ -32,7 +32,7 @@ def uniform(+x0: U32, +y0: U32, +s: U32, sm: T.Sum, +hor: F32, +eye: F32, +sc: F
 
 # The parent calculates "uni": a block with one color becomes one Pix.
 # kind and paint tell if the uniform block is solid (wall or ring, and its color) or floor and ceiling.
-def build(+depth: Nat, uni: Bool, kind: U32, paint: U32, +x0: U32, +y0: U32, +size: U32, cols: T.Cols, +hor: F32, +eye: F32, +sc: F32, +cb: U32, +bon: Bool, +oon: Bool, +phase: F32, +w: U32, +h: U32) -> Image:
+def flat_build(+depth: Nat, uni: Bool, kind: U32, paint: U32, +x0: U32, +y0: U32, +size: U32, cols: T.Cols, +hor: F32, +eye: F32, +sc: F32, +cb: U32, +bon: Bool, +oon: Bool, +phase: F32, +w: U32, +h: U32) -> Image:
   match depth uni cols:
     case _ True{} _:
       out = Bool.or(U32.is_ge(x0, w), U32.is_ge(y0, h))
@@ -53,8 +53,39 @@ def build(+depth: Nat, uni: Bool, kind: U32, paint: U32, +x0: U32, +y0: U32, +si
       +ktr = Sum.solid_kind(y0, half, sr)
       +kbl = Sum.solid_kind(y1, half, sl)
       +kbr = Sum.solid_kind(y1, half, sr)
-      tl tr = build(d, uniform(x0, y0, half, sl, hor, eye, sc, ktl, w, h), ktl, Sum.solid_paint(ktl, sl), x0, y0, half, l, hor, eye, sc, cb, bon, oon, phase, w, h) build(d, uniform(x1, y0, half, sr, hor, eye, sc, ktr, w, h), ktr, Sum.solid_paint(ktr, sr), x1, y0, half, r, hor, eye, sc, cb, bon, oon, phase, w, h)
-      bl br = build(d, uniform(x0, y1, half, sl, hor, eye, sc, kbl, w, h), kbl, Sum.solid_paint(kbl, sl), x0, y1, half, l, hor, eye, sc, cb, bon, oon, phase, w, h) build(d, uniform(x1, y1, half, sr, hor, eye, sc, kbr, w, h), kbr, Sum.solid_paint(kbr, sr), x1, y1, half, r, hor, eye, sc, cb, bon, oon, phase, w, h)
+      tl = flat_build(d, uniform(x0, y0, half, sl, hor, eye, sc, ktl, w, h), ktl, Sum.solid_paint(ktl, sl), x0, y0, half, l, hor, eye, sc, cb, bon, oon, phase, w, h)
+      tr = flat_build(d, uniform(x1, y0, half, sr, hor, eye, sc, ktr, w, h), ktr, Sum.solid_paint(ktr, sr), x1, y0, half, r, hor, eye, sc, cb, bon, oon, phase, w, h)
+      bl = flat_build(d, uniform(x0, y1, half, sl, hor, eye, sc, kbl, w, h), kbl, Sum.solid_paint(kbl, sl), x0, y1, half, l, hor, eye, sc, cb, bon, oon, phase, w, h)
+      br = flat_build(d, uniform(x1, y1, half, sr, hor, eye, sc, kbr, w, h), kbr, Sum.solid_paint(kbr, sr), x1, y1, half, r, hor, eye, sc, cb, bon, oon, phase, w, h)
+      Qua{tl, tr, bl, br}
+
+# Below 16-px blocks the tree is built without forks: a fork for each Qua costs more than the block.
+def build(+depth: Nat, tiny: Bool, uni: Bool, kind: U32, paint: U32, +x0: U32, +y0: U32, +size: U32, cols: T.Cols, +hor: F32, +eye: F32, +sc: F32, +cb: U32, +bon: Bool, +oon: Bool, +phase: F32, +w: U32, +h: U32) -> Image:
+  match depth tiny uni cols:
+    case _ True{} _ _:
+      flat_build(depth, uni, kind, paint, x0, y0, size, cols, hor, eye, sc, cb, bon, oon, phase, w, h)
+    case _ False{} True{} _:
+      out = Bool.or(U32.is_ge(x0, w), U32.is_ge(y0, h))
+      Pix{Bool.pick(U32, out, 0, Bool.pick(U32, U32.is_gt(kind, 0), paint, Color.flat((U32.to_f32(y0) + 1.0 : F32), hor, eye, sc, cb)))}
+    case 0n False{} False{} T.CLeaf{sm, col}:
+      Pix{leaf(x0, y0, col, hor, eye, sc, cb, bon, oon, phase, U32.shr(w), U32.shr(h))}
+    case 0n False{} False{} T.CNode{sm, l, r}:
+      Pix{0}
+    case 1n+d False{} False{} T.CLeaf{sm, col}:
+      Pix{0}
+    case 1n+d False{} False{} T.CNode{sm, +l, +r}:
+      +half = U32.shr(size)
+      +tiny_next = U32.is_le(half, 16)
+      +x1 = (x0 + half : U32)
+      +y1 = (y0 + half : U32)
+      +sl = Cols.sum(l)
+      +sr = Cols.sum(r)
+      +ktl = Sum.solid_kind(y0, half, sl)
+      +ktr = Sum.solid_kind(y0, half, sr)
+      +kbl = Sum.solid_kind(y1, half, sl)
+      +kbr = Sum.solid_kind(y1, half, sr)
+      tl tr = build(d, tiny_next, uniform(x0, y0, half, sl, hor, eye, sc, ktl, w, h), ktl, Sum.solid_paint(ktl, sl), x0, y0, half, l, hor, eye, sc, cb, bon, oon, phase, w, h) build(d, tiny_next, uniform(x1, y0, half, sr, hor, eye, sc, ktr, w, h), ktr, Sum.solid_paint(ktr, sr), x1, y0, half, r, hor, eye, sc, cb, bon, oon, phase, w, h)
+      bl br = build(d, tiny_next, uniform(x0, y1, half, sl, hor, eye, sc, kbl, w, h), kbl, Sum.solid_paint(kbl, sl), x0, y1, half, l, hor, eye, sc, cb, bon, oon, phase, w, h) build(d, tiny_next, uniform(x1, y1, half, sr, hor, eye, sc, kbr, w, h), kbr, Sum.solid_paint(kbr, sr), x1, y1, half, r, hor, eye, sc, cb, bon, oon, phase, w, h)
       Qua{tl, tr, bl, br}
 
 # The quadtree root is the smallest power of 2 that covers the window, as in Window.frame.
@@ -81,9 +112,9 @@ def frame(+px: F32, +py: F32, +ang: F32, +hor: F32, +eye: F32, feet: F32, phase:
   +depth = U32.to_nat((log2(32n, size) - 1 : U32))
   +sc = (U32.to_f32(h) * C.SCALE() / C.REF_H() : F32)
   +plane = (U32.to_f32(w) / (2.0 * sc) : F32)
-  cols = Cols.build(depth, 0, size, px, py, dirx, diry, (F32.neg(diry) * plane : F32), (dirx * plane : F32), Ghost.of(px, py, blue, orange), blue, orange, hor, eye, sc, feet, w)
+  cols = Cols.build(depth, U32.is_le(size, 16), 0, size, px, py, dirx, diry, (F32.neg(diry) * plane : F32), (dirx * plane : F32), Ghost.of(px, py, blue, orange), blue, orange, hor, eye, sc, feet, w)
   cb = Bool.pick(U32, won, C.CEIL_WON(), C.CEIL())
-  build(depth, False{}, 0, 0, 0, 0, size, cols, hor, eye, sc, cb, Portal.is_on(blue), Portal.is_on(orange), phase, w, h)
+  build(depth, U32.is_le(size, 16), False{}, 0, 0, 0, 0, size, cols, hor, eye, sc, cb, Portal.is_on(blue), Portal.is_on(orange), phase, w, h)
 
 # Eye = 0.5 + jump height + step bob (only on the floor).
 # Pitch uses the reference screen and increases with the window height.
