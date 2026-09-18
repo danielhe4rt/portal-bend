@@ -1,0 +1,13 @@
+# Binaries from bend (bend x.bend -o x)
+/portal
+/tests/*
+!/tests/*.bend
+!/tests/*.py
+
+# Snapshot output
+/snaps/
+*.snap.png
+
+__pycache__/
+*.o
+*.so
